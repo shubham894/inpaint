@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processing Web UI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            text-align: center;
+        }
+        .container {
+            max-width: 100%;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+            
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        .preview-wrapper {
+            margin-top: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 16px;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 10px auto;
+            border-radius: 8px;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .upload-btn {
+            display: inline-block;
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .upload-btn:hover {
+            background-color: #0056b3;
+        }
+        #output {
+            margin-top: 20px;
+        }
+        h2 {
+            margin-top: 20px;
+            color: #333;
+        }
+
+
+        .loading-spinner p {
+    font-size: 1.5em;
+    color: #007bff;
+}
+
+button#downloadButton:hover {
+    background-color: #0056b3;
+}
+
+
+.preview-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+.preview-wrapper {
+    width: 45%; /* Adjust width as needed */
+}
+
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload Images</h1>
+        <form id="image-form" method="POST" enctype="multipart/form-data">
+            <div class="preview-container">
+                <div class="image-preview preview-wrapper">
+                    <label for="image-input">Image:</label>
+                    <label for="image-input" class="upload-btn">Upload Image</label>
+                    <input type="file" id="image-input" name="image" accept="image/*" onchange="previewImage('image-input', 'image-preview')">
+                    <img id="image-preview" alt="Image Preview">
+                </div>
+
+                <div class="mask-preview preview-wrapper">
+                    <label for="mask-input">Mask:</label>
+                    <label for="mask-input" class="upload-btn">Upload Mask</label>
+                    <input type="file" id="mask-input" name="mask" accept="image/*" onchange="previewImage('mask-input', 'mask-preview')">
+                    <img id="mask-preview" alt="Mask Preview">
+                </div>
+            </div>
+            
+            <button type="submit" class="upload-btn" id="process-btn">Process Images</button>
+            
+        </form>
+
+        <div id="loadingSpinner" class="loading-spinner" style="display:none;">
+            <p>Loading...</p>
+        </div>
+
+        <div id="output">
+            <h2>Output</h2>
+            <img id="output-image" alt="Processed Image">
+        </div>
+
+        
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+    const uploadForm = document.getElementById('image-form');
+    const imageInput = document.getElementById('image-input');
+    const maskInput = document.getElementById('mask-input');
+    const outputImage = document.getElementById('output-image');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+
+    function showLoading() {
+        loadingSpinner.style.display = 'block';
+    }
+
+    function hideLoading() {
+        loadingSpinner.style.display = 'none';
+    }
+
+    imageInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const imageUrl = URL.createObjectURL(this.files[0]);
+            document.getElementById('image-preview').src = imageUrl;
+        }
+    });
+
+    maskInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const maskUrl = URL.createObjectURL(this.files[0]);
+            document.getElementById('mask-preview').src = maskUrl;
+        }
+    });
+
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        showLoading();
+
+        const formData = new FormData(uploadForm);
+        
+        fetch('/process_image', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        
+        .then(data => {
+            hideLoading();
+            if (data.output_image) {
+                outputImage.src = `data:image/jpeg;base64,${data.output_image}`;
+                // Create download button
+                const downloadButton = document.createElement('button');
+                downloadButton.innerText = 'Download Result';
+                downloadButton.addEventListener('click', function() {
+                    const link = document.createElement('a');
+                    link.href = `data:image/jpeg;base64,${data.output_image}`;
+                    link.download = 'output_image.jpeg';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+
+                // Append download button to output container
+                const outputContainer = document.getElementById('output');
+                outputContainer.appendChild(downloadButton);
+
+            } else {
+                alert('Error processing image');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error processing image');
+        });
+    });
+});
+
+    </script>
+</body>
+</html>
